@@ -45,3 +45,4 @@ rough work areas
 1. adding a new transport layer that roughly mirrors xpc but works over tcp so it'll work on windows too
 2. per platform build system. check out https://github.com/lunixbochs/lib43 . get it running on linux first is probably easier, just to verify there's no mac bits
 3. introducing a cross platform way to load the symbols we need
+
