@@ -9,16 +9,16 @@ def recv_msg(sock):
 
 
 def _recv_raw(sock, message_length):
-    chunks = []
-    bytes_received = 0
-    while bytes_received < message_length:
-        # TODO - why limit chunk size here?
-        chunk = sock.recv(min(message_length - bytes_received, 2048))
+    data = bytearray(message_length)
+    offset = 0
+    while offset < message_length:
+        chunk = sock.recv(min(message_length - offset, 2048))
         if chunk == b"":
             raise RuntimeError("socket connection broken")
-        chunks.append(chunk)
-        bytes_received = bytes_received + len(chunk)
-    return b"".join(chunks)
+        new_offset = offset + len(chunk)
+        data[offset:new_offset] = chunk
+        offset = new_offset
+    return data
 
 
 def send_msg(sock, obj):
