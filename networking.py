@@ -1,12 +1,11 @@
 import struct
-
-ENCODING = "utf-8"
+import bson
 
 
 def recv_msg(sock):
     length = struct.unpack("!Q", _recv_raw(sock, 8))[0]
     message_bytes = _recv_raw(sock, length)
-    return message_bytes.decode(ENCODING)
+    return bson.loads(message_bytes)
 
 
 def _recv_raw(sock, message_length):
@@ -22,9 +21,10 @@ def _recv_raw(sock, message_length):
     return b"".join(chunks)
 
 
-def send_msg(sock, msg):
-    _send_raw(sock, struct.pack("!Q", len(msg)))
-    _send_raw(sock, msg.encode(ENCODING))
+def send_msg(sock, obj):
+    data = bson.dumps(obj)
+    _send_raw(sock, struct.pack("!Q", len(data)))
+    _send_raw(sock, data)
 
 
 def _send_raw(sock, data):

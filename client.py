@@ -10,7 +10,7 @@ def main():
 
     counter = 0
     while True:
-        message = f"ping {counter}"
+        message = {"m": "ping", "c": counter}
         print("sending message:", message)
         networking.send_msg(s, message)
         reply = networking.recv_msg(s)

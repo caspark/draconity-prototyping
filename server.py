@@ -15,7 +15,7 @@ class Handler(threading.Thread):
             message = networking.recv_msg(self.socket)
             if message:
                 print("received message", message)
-                networking.send_msg(self.socket, "pong!")
+                networking.send_msg(self.socket, {"m": "pong!", "c": message["c"]})
             else:
                 print("no message received so ending loop")
                 break
