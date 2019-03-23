@@ -10,11 +10,13 @@ def main():
 
     counter = 0
     while True:
+        tid = 1
         message = {"m": "ping", "c": counter}
-        print("sending message:", message)
-        networking.send_msg(s, message)
-        reply = networking.recv_msg(s)
-        print("received reply:", reply)
+        print("sending message:", tid, message)
+        networking.send_msg(s, tid, message)
+
+        tid_in, reply = networking.recv_msg(s)
+        print("received reply:", tid_in, reply)
 
         time.sleep(1)
         counter += 1

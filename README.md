@@ -24,19 +24,12 @@ pipenv run python client.py
 
 ## TODOs
 
-* transaction id
 * server publishing
-
 
 ## Scratchpad
 
-we need a new transport for windows - ryan prefers tcp with multiple clients supported
-using xpc for comms right now
-
 protocol format
 https://talonvoice.slack.com/archives/CGX00GNDP/p1553145568076300
-
-tid, len = struct.unpack('<QQ', s.read(16)); struct.pack('<QQ', tid, len)`
 
 on windows binaries
 https://github.com/lunixbochs/lib43

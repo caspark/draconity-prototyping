@@ -12,13 +12,9 @@ class Handler(threading.Thread):
     def run(self):
         print("thread is running w socket", self.socket)
         while True:
-            message = networking.recv_msg(self.socket)
-            if message:
-                print("received message", message)
-                networking.send_msg(self.socket, {"m": "pong!", "c": message["c"]})
-            else:
-                print("no message received so ending loop")
-                break
+            tid, message = networking.recv_msg(self.socket)
+            print("received message", message)
+            networking.send_msg(self.socket, tid, {"m": "pong!", "c": message["c"]})
 
 
 def main():

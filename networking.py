@@ -1,11 +1,15 @@
 import struct
 import bson
 
+MSG_HEADER_FMT = "!QQ"  # transaction_id, data_length
+
 
 def recv_msg(sock):
-    length = struct.unpack("!Q", _recv_raw(sock, 8))[0]
+    transaction_id, length = struct.unpack(
+        MSG_HEADER_FMT, _recv_raw(sock, struct.calcsize(MSG_HEADER_FMT))
+    )
     message_bytes = _recv_raw(sock, length)
-    return bson.loads(message_bytes)
+    return transaction_id, bson.loads(message_bytes)
 
 
 def _recv_raw(sock, message_length):
@@ -21,9 +25,9 @@ def _recv_raw(sock, message_length):
     return data
 
 
-def send_msg(sock, obj):
+def send_msg(sock, transaction_id, obj):
     data = bson.dumps(obj)
-    _send_raw(sock, struct.pack("!Q", len(data)))
+    _send_raw(sock, struct.pack(MSG_HEADER_FMT, transaction_id, len(data)))
     _send_raw(sock, data)
 
 
