@@ -2,7 +2,6 @@ import unittest
 import random
 import itertools
 import string
-import traceback
 
 from ring_buffer import RingBuffer
 
@@ -165,4 +164,3 @@ class TestRingBuffer(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
-
