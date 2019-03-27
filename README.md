@@ -22,6 +22,12 @@ pipenv run python server.py
 pipenv run python client.py
 ```
 
+## Tests
+
+```
+pipenv run python ring_buffer_test.py
+```
+
 ## TODOs
 
 * server publishing on tid=0 and client support for that

@@ -69,7 +69,8 @@ class TestRingBuffer(unittest.TestCase):
         self.assertEqual(b.read(), None)
 
         b.write(b"bc")
-        self.assertEqual(b.read(), b"bc")
+        self.assertEqual(b.read(), b"b")
+        self.assertEqual(b.read(), b"c")
         self.assertEqual(b.read(), None)
 
     def test_read_empty(self):
@@ -94,15 +95,16 @@ class TestRingBuffer(unittest.TestCase):
             b.write(b"cde")
 
     def test_random_operations(self):
+        """A quicktest-lite test to verify various operations work as intended"""
         debug_this = False
 
         for test_num in range(1000):
             inputs = itertools.cycle(string.ascii_letters.encode("ascii"))
 
             # params for test
-            operation_count = random.randrange(1, 10)
+            operation_count = random.randrange(1, 20)
             # possible operations: None = read input, number = write that many bytes
-            operations = random.choices([None] + list(range(1, 10)), k=operation_count)
+            operations = random.choices([None] + list(range(1, 5)), k=operation_count)
             buffer_size = random.randrange(20)
 
             # do the test
@@ -129,11 +131,11 @@ class TestRingBuffer(unittest.TestCase):
                         read_from_backup.extend(backup)
                         backup.clear()
                     else:
-                        # # check we can't write more than we have space for
-                        # if len(backup) + op >= buffer_size:
-                        #     with self.assertRaises(ValueError):
-                        #         items_to_write = list(itertools.islice(inputs, op))
-                        #         buffer.write(items_to_write)
+                        # check we can't write more than we have space for
+                        if len(backup) + op > buffer_size:
+                            with self.assertRaises(ValueError):
+                                items_to_write = list(itertools.islice(inputs, op))
+                                buffer.write(items_to_write)
 
                         # actually try and write no more than we have space for
                         count_to_write = min(op, buffer_size - len(backup))

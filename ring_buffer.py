@@ -4,6 +4,8 @@ DEBUG = False
 class RingBuffer(object):
     def __init__(self, size):
         self.buffer = bytearray(size)
+        # necessary to tell difference between empty and full state
+        self.num_bytes_used = 0
         self.start = 0
         self.end = 0
 
@@ -16,14 +18,7 @@ class RingBuffer(object):
         return len(self.buffer)
 
     def bytes_used(self):
-        if self.start <= self.end:
-            return self.end - self.start
-        else:
-            # we've wrapped, need to add space at end
-            end_space = len(self.buffer) - self.start
-            # and space used at start
-            start_space = self.end
-            return end_space + start_space
+        return self.num_bytes_used
 
     def bytes_free(self):
         return self.bytes_total() - self.bytes_used()
@@ -57,9 +52,10 @@ class RingBuffer(object):
                 print("2-writing", bs[bs_offset:])
             self.buffer[offset_start:offset_end] = bs[bs_offset:]
             self.end = offset_end
+        self.num_bytes_used += len(bs)
 
     def read(self):
-        if self.bytes_used() == 0 and items:
+        if self.bytes_used() == 0:
             return None
 
         if self.start < self.end:
@@ -68,6 +64,9 @@ class RingBuffer(object):
             offset_start = self.start
             offset_end = self.end
             self.start = self.end
+            if self.start == len(self.buffer):
+                self.start = 0
+                self.end = 0
         else:  # buffer has wrapped, so return from start
             if DEBUG:
                 print("2-read")
@@ -75,4 +74,5 @@ class RingBuffer(object):
             offset_end = len(self.buffer)
             self.start = 0
         val = self.buffer[offset_start:offset_end]
+        self.num_bytes_used -= offset_end - offset_start
         return val
