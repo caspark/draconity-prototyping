@@ -4,14 +4,12 @@ DEBUG = False
 class RingBuffer(object):
     def __init__(self, size):
         self.buffer = bytearray(size)
-        # necessary to tell difference between empty and full state
-        self.num_bytes_used = 0
         self.start = 0
-        self.end = 0
+        self.num_bytes_used = 0
 
     def __repr__(self):
-        return "RingBuffer(start={}, end={}, buffer={})".format(
-            self.start, self.end, self.buffer
+        return "RingBuffer(start={}, num_bytes_used={}, buffer={})".format(
+            self.start, self.num_bytes_used, self.buffer
         )
 
     def bytes_total(self):
@@ -32,47 +30,41 @@ class RingBuffer(object):
 
         bs_offset = 0
         # first, fit as much as we can into space between end and buffer end
-        if self.start <= self.end:  # (only possible if the buffer hasn't wrapped yet)
-            offset_start = self.end
-            offset_end = min(self.end + len(bs), len(self.buffer))
+        # (only possible if the buffer hasn't wrapped yet)
+        if self.start + self.num_bytes_used < len(self.buffer):
+            offset_start = self.start + self.num_bytes_used
+            offset_end = min(offset_start + len(bs), len(self.buffer))
             bs_offset = offset_end - offset_start
             if DEBUG:
                 print("1-writing", bs[:bs_offset], "end is:", offset_end)
             self.buffer[offset_start:offset_end] = bs[:bs_offset]
-            self.end = offset_end
+            self.num_bytes_used += offset_end - offset_start
 
         # secondly, fit the remainder at the start of the buffer
         if bs_offset < len(bs):  # (only if there's anything left to write)
-            if self.end == len(self.buffer):
-                offset_start = 0
-            else:
-                offset_start = self.end
+            offset_start = (self.start + self.num_bytes_used) % len(self.buffer)
             offset_end = offset_start + len(bs) - bs_offset
             if DEBUG:
                 print("2-writing", bs[bs_offset:])
             self.buffer[offset_start:offset_end] = bs[bs_offset:]
-            self.end = offset_end
-        self.num_bytes_used += len(bs)
+            self.num_bytes_used += offset_end - offset_start
 
     def read(self):
         if self.bytes_used() == 0:
             return None
 
-        if self.start < self.end:
-            if DEBUG:
-                print("1-read")
+        if self.start + self.num_bytes_used < len(self.buffer):
             offset_start = self.start
-            offset_end = self.end
-            self.start = self.end
-            if self.start == len(self.buffer):
-                self.start = 0
-                self.end = 0
-        else:  # buffer has wrapped, so return from start
+            offset_end = offset_start + self.num_bytes_used
+            self.start = offset_end
             if DEBUG:
-                print("2-read")
+                print("1-read, offset start:", offset_start, "offset end", offset_end)
+        else:  # buffer has wrapped, so return from start
             offset_start = self.start
             offset_end = len(self.buffer)
             self.start = 0
+            if DEBUG:
+                print("2-read, offset start:", offset_start, "offset end", offset_end)
         val = self.buffer[offset_start:offset_end]
         self.num_bytes_used -= offset_end - offset_start
         return val

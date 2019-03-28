@@ -160,7 +160,3 @@ class TestRingBuffer(unittest.TestCase):
                     )
                     e.args = (message,)
                     raise
-
-
-if __name__ == "__main__":
-    unittest.main()

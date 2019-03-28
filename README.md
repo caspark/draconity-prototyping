@@ -25,7 +25,7 @@ pipenv run python client.py
 ## Tests
 
 ```
-pipenv run python ring_buffer_test.py
+pipenv run python -m unittest -v ring_buffer_test.TestRingBuffer
 ```
 
 ## TODOs
