@@ -27,11 +27,11 @@ def _recv_raw(sock, message_length):
 
 def send_msg(sock, transaction_id, obj):
     data = bson.dumps(obj)
-    _send_raw(sock, struct.pack(MSG_HEADER_FMT, transaction_id, len(data)))
-    _send_raw(sock, data)
+    send_raw(sock, struct.pack(MSG_HEADER_FMT, transaction_id, len(data)))
+    send_raw(sock, data)
 
 
-def _send_raw(sock, data):
+def send_raw(sock, data):
     message_length = len(data)
     bytes_sent_total = 0
     while bytes_sent_total < message_length:

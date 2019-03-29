@@ -33,7 +33,6 @@ pipenv run python -m unittest -v ring_buffer_test.TestRingBuffer
 * server publishing on tid=0 and client support for that
 * make client send multiple messages before waiting for reply to prove server can handle that
 * make server sometimes wait to send reply to prove client can handle that
-* convert server to non-blocking IO?
 
 ## Scratchpad
 
