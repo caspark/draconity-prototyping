@@ -93,6 +93,53 @@ class TestRingBuffer(unittest.TestCase):
         with self.assertRaises(ValueError):
             b.write(b"cde")
 
+    def test_reading_exact_nothing(self):
+        b = RingBuffer(4)
+        b.write(b"abc")
+        self.assertEqual(b.read_exactly(0), b"")
+
+    def test_reading_exact_negative(self):
+        b = RingBuffer(4)
+        b.write(b"abc")
+        with self.assertRaises(ValueError):
+            b.read_exactly(-1)
+
+    def test_reading_exact_basic(self):
+        b = RingBuffer(4)
+        b.write(b"abc")
+        self.assertEqual(b.read_exactly(2), b"ab")
+
+    def test_reading_exact_basic_full(self):
+        b = RingBuffer(4)
+        b.write(b"abcd")
+        self.assertEqual(b.read_exactly(4), b"abcd")
+
+    def test_reading_exact_wrapping(self):
+        b = RingBuffer(4)
+        b.write(b"ab")
+        self.assertEqual(b.read(), b"ab")
+
+        b.write(b"defg")
+        self.assertEqual(b.read_exactly(3), b"def")
+
+    def test_reading_exact_wrapping_singles(self):
+        b = RingBuffer(4)
+        b.write(b"ab")
+        self.assertEqual(b.read(), b"ab")
+
+        b.write(b"defg")
+        self.assertEqual(b.read_exactly(1), b"d")
+        self.assertEqual(b.read_exactly(1), b"e")
+        self.assertEqual(b.read_exactly(1), b"f")
+
+    def test_reading_exact_wrapping_full(self):
+        b = RingBuffer(4)
+        b.write(b"ab")
+        self.assertEqual(b.read(), b"ab")
+
+        b.write(b"defg")
+        self.assertEqual(b.read_exactly(4), b"defg")
+
     def test_random_operations(self):
         """A quicktest-lite test to verify various operations work as intended"""
         debug_this = False

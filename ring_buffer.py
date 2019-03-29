@@ -59,12 +59,42 @@ class RingBuffer(object):
             self.start = offset_end
             if DEBUG:
                 print("1-read, offset start:", offset_start, "offset end", offset_end)
-        else:  # buffer has wrapped, so return from start
+        else:
+            # buffer has wrapped, so return as much as we can, then next
+            # time we'll read from the start of the buffer to get the rest
             offset_start = self.start
             offset_end = len(self.buffer)
             self.start = 0
             if DEBUG:
                 print("2-read, offset start:", offset_start, "offset end", offset_end)
-        val = self.buffer[offset_start:offset_end]
         self.num_bytes_used -= offset_end - offset_start
-        return val
+        return self.buffer[offset_start:offset_end]
+
+    def read_exactly(self, desired_bytes):
+        if desired_bytes < 0:
+            raise ValueError("desired bytes of {} is less than 0".format(desired_bytes))
+        elif self.bytes_used() < desired_bytes:
+            return None
+
+        read_bytes = bytearray()
+
+        # first read from start pos to potentially the end of the buffer
+        offset_start = self.start
+        offset_end = min(len(self.buffer), offset_start + desired_bytes)
+        read_bytes.extend(self.buffer[offset_start:offset_end])
+        self.start = offset_end
+        if DEBUG:
+            print("1-read-x, offset start:", offset_start, "offset end", offset_end)
+
+        # if we have more bytes to read still, we need to read from start
+        # of buffer to the last used portion of it
+        if len(read_bytes) < desired_bytes:
+            offset_start = 0
+            offset_end = desired_bytes - len(read_bytes)
+            read_bytes.extend(self.buffer[offset_start:offset_end])
+            self.start = offset_end
+            if DEBUG:
+                print("2-read-x, offset start:", offset_start, "offset end", offset_end)
+
+        self.num_bytes_used -= len(read_bytes)
+        return read_bytes
