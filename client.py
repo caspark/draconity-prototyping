@@ -64,7 +64,9 @@ class Client(object):
         method = message["m"]
 
         if method == "pong":
-            self.server.queue_message(tid, build_ping_message(message["c"] + 1))
+            count = message["c"]
+            print("Ping pong #{} completed! Trying {} now.".format(count, count + 1))
+            self.server.queue_message(tid, build_ping_message(count + 1))
         else:
             print("unrecognized message method:", method)
 
