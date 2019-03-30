@@ -20,8 +20,11 @@ class Client(object):
 
         self.server = networking.Messenger(s)
         self.server.queue_message(1, build_ping_message(count=0))
+        self.server.queue_message(2, build_ping_message(count=100))
 
         while True:
+            time.sleep(0.5)  # a nice sleep to make output easier to read
+
             timeout = 0.01  # in seconds
             ready_to_read, ready_to_write, in_error = select.select(
                 [self.server.socket],
@@ -61,7 +64,6 @@ class Client(object):
         method = message["m"]
 
         if method == "pong":
-            time.sleep(1)
             self.server.queue_message(tid, build_ping_message(message["c"] + 1))
         else:
             print("unrecognized message method:", method)
