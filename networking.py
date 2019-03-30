@@ -111,6 +111,7 @@ class Messenger(object):
                 return
             else:
                 (tid, message) = parsed
+                print("received message", tid, message)
                 yield tid, message
 
     def queue_message(self, tid, message):

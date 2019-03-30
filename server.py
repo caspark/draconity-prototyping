@@ -67,7 +67,7 @@ class Server(object):
         try:
             self.known_clients[sock].send_messages()
         except networking.MessengerConnectionBroken as e:
-            print("Handling send error by removing client:", e)
+            print("Handling broken connection send error by removing client:", e)
             del self.known_clients[sock]
 
     def handle_readable_socket(self, sock):
@@ -78,15 +78,15 @@ class Server(object):
         try:
             for tid, message in client.read_messages():
                 self.handle_message(client, tid, message)
-        except (
-            networking.MessengerBufferFullError,
-            networking.MessengerConnectionBroken,
-        ) as e:
-            print("Handling read error by removing client:", e)
+        except networking.MessengerBufferFullError as e:
+            print("Handling full buffer read error by removing client:", e)
+            sock.close()
+            del self.known_clients[sock]
+        except networking.MessengerConnectionBroken as e:
+            print("Handling broken connection read error by removing client:", e)
             del self.known_clients[sock]
 
     def handle_message(self, client, tid, message):
-        print("server received message", tid, message)
         if "m" not in message:
             print("unrecognized message, tid: {}  message: {}".format(tid, message))
             return
