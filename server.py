@@ -24,19 +24,13 @@ class Server(object):
                 s for s, c in self.known_clients.items() if c.has_messages_to_send()
             ]
             if len(sockets_needing_writes) > 0:
-                print("{} sockets needing writes".format(len(sockets_needing_writes)))
+                print("{} sockets need writes".format(len(sockets_needing_writes)))
             ready_to_read, ready_to_write, in_error = select.select(
                 [server_socket] + list(self.known_clients.keys()),
                 sockets_needing_writes,
                 self.known_clients,
                 timeout,
             )
-            if len(ready_to_read) > 0 or len(ready_to_write) > 0 or len(in_error) > 0:
-                print(
-                    "select results: rlist={}, wlist={}, xlist={}".format(
-                        ready_to_read, ready_to_write, in_error
-                    )
-                )
 
             for sock in in_error:
                 self.handle_errored_socket(sock)
@@ -47,7 +41,7 @@ class Server(object):
             for sock in ready_to_read:
                 if sock == server_socket:
                     (client_socket, address) = server_socket.accept()
-                    print("{} is new connection from {}".format(client_socket, address))
+                    print("Accepting connection from {}".format(address))
                     self.known_clients[client_socket] = networking.Messenger(
                         client_socket
                     )
@@ -56,7 +50,7 @@ class Server(object):
                     self.handle_readable_socket(sock)
 
     def handle_errored_socket(self, sock):
-        print("socket in error", socket)
+        print("socket in error", socket.getpeername())
         if sock in self.known_clients:
             del self.known_clients[sock]
 

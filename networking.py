@@ -52,6 +52,9 @@ class Messenger(object):
         self._send_buffer = RingBuffer(2 ** 20)
         self._parser = MessageReader()
 
+    def debug(self, s):
+        print("Messenger{}: {}".format(self.socket.getpeername(), s))
+
     def read_messages(self):
         """Call this you when know there is readable data for this socket;
         it will yield a tuple in the format of (transaction_id, message object)
@@ -59,7 +62,7 @@ class Messenger(object):
         bytes_read = self.socket.recv(2048)
         if len(bytes_read) == 0:
             raise MessengerConnectionBroken("Socket connection broken", self.socket)
-        print("read {} bytes from {}".format(len(bytes_read), self.socket))
+        self.debug("read {} bytes".format(len(bytes_read)))
 
         try:
             self._read_buffer.write(bytes_read)
@@ -74,12 +77,14 @@ class Messenger(object):
                 return
             else:
                 (tid, message) = parsed
-                print("received message", tid, message)
+                self.debug(
+                    "received message; tid: {}  message: {}".format(tid, message)
+                )
                 yield tid, message
 
     def queue_message(self, tid, message):
         """An API for queuing messages for sending later"""
-        print("queuing message; tid: {}  message: {}".format(tid, message))
+        self.debug("queuing message; tid: {}  message: {}".format(tid, message))
         data = bson.dumps(message)
         header = struct.pack(MSG_HEADER_FMT, tid, len(data))
         try:
@@ -100,7 +105,7 @@ class Messenger(object):
             to_send = self._send_buffer.read()
             if to_send is None:
                 break
-            print("sending {} bytes to {}".format(len(to_send), self.socket))
+            self.debug("sending {} bytes".format(len(to_send)))
 
             message_length = len(to_send)
             bytes_sent_total = 0
