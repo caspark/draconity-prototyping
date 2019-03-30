@@ -67,7 +67,7 @@ class Client(object):
             count = message["c"]
             print("Ping pong #{} completed! Trying {} now.".format(count, count + 1))
             self.server.queue_message(tid, build_ping_message(count + 1))
-        if method == "time":
+        elif method == "time":
             time = message["time"]
             print("Received server time broadcast! Time on server is {}".format(time))
         else:
