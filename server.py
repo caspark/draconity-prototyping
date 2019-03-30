@@ -1,12 +1,28 @@
 import select
 import socket
+import datetime
 
 import networking
+
+BROADCAST_INTERVAL_SECS = 5
+
+
+def calc_next_broadcast_time():
+    return datetime.datetime.now() + datetime.timedelta(0, BROADCAST_INTERVAL_SECS)
+
+
+def build_time_message():
+    """A dummy message to test that broadcast (publishing messages without an incoming message) works"""
+    return {
+        "m": "time",
+        "time": datetime.datetime.now().replace(tzinfo=datetime.timezone.utc),
+    }
 
 
 class Server(object):
     def __init__(self):
         self.known_clients = {}
+        self.next_broadcast_at = calc_next_broadcast_time()
 
     def serve(self):
         host_and_port = (socket.gethostname(), 8000)
@@ -48,6 +64,18 @@ class Server(object):
                     self.handle_readable_socket(client_socket)
                 else:
                     self.handle_readable_socket(sock)
+
+            if datetime.datetime.now() > self.next_broadcast_at:
+                print(
+                    "Sending server time broadcast to all {} connected clients".format(
+                        len(self.known_clients)
+                    )
+                )
+                self.next_broadcast_at = calc_next_broadcast_time()
+                for client in self.known_clients.values():
+                    client.queue_message(
+                        networking.BROADCAST_TRANSACTION_ID, build_time_message()
+                    )
 
     def handle_errored_socket(self, sock):
         print("socket in error", socket.getpeername())

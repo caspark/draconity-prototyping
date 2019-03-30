@@ -23,7 +23,7 @@ class Client(object):
         self.server.queue_message(2, build_ping_message(count=100))
 
         while True:
-            time.sleep(0.5)  # a nice sleep to make output easier to read
+            time.sleep(1)  # a nice sleep to make output easier to read
 
             timeout = 0.01  # in seconds
             ready_to_read, ready_to_write, in_error = select.select(
@@ -67,6 +67,9 @@ class Client(object):
             count = message["c"]
             print("Ping pong #{} completed! Trying {} now.".format(count, count + 1))
             self.server.queue_message(tid, build_ping_message(count + 1))
+        if method == "time":
+            time = message["time"]
+            print("Received server time broadcast! Time on server is {}".format(time))
         else:
             print("unrecognized message method:", method)
 

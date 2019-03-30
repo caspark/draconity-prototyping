@@ -6,6 +6,8 @@ from ring_buffer import RingBuffer
 
 MSG_HEADER_FMT = "!QQ"  # transaction_id, data_length
 
+BROADCAST_TRANSACTION_ID = 0
+
 
 class MessageReader(object):
     def __init__(self):
