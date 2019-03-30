@@ -66,16 +66,17 @@ class Server(object):
                     self.handle_readable_socket(sock)
 
             if datetime.datetime.now() > self.next_broadcast_at:
-                print(
-                    "Sending server time broadcast to all {} connected clients".format(
-                        len(self.known_clients)
-                    )
-                )
                 self.next_broadcast_at = calc_next_broadcast_time()
-                for client in self.known_clients.values():
-                    client.queue_message(
-                        networking.BROADCAST_TRANSACTION_ID, build_time_message()
+                if len(self.known_clients) > 0:
+                    print(
+                        "Sending server time broadcast to all {} connected clients".format(
+                            len(self.known_clients)
+                        )
                     )
+                    for client in self.known_clients.values():
+                        client.queue_message(
+                            networking.BROADCAST_TRANSACTION_ID, build_time_message()
+                        )
 
     def handle_errored_socket(self, sock):
         print("socket in error", socket.getpeername())
