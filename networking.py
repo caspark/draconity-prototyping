@@ -39,3 +39,29 @@ def send_raw(sock, data):
         if sent == 0:
             raise RuntimeError("socket connection broken")
         bytes_sent_total += sent
+
+
+class MessageParser(object):
+    def __init__(self):
+        self.tid = None
+        self.len = None
+        self.msg = None
+
+    def try_parse(self, ring_buffer):
+        header_size = struct.calcsize(MSG_HEADER_FMT)
+        if self.tid is None and ring_buffer.bytes_used() >= header_size:
+            self.tid, self.len = struct.unpack(
+                MSG_HEADER_FMT, ring_buffer.read_exactly(header_size)
+            )
+        else:
+            return
+        if self.msg is None and ring_buffer.bytes_used() >= self.len:
+            self.msg = bson.loads(ring_buffer.read_exactly(self.len))
+        else:
+            return
+
+        r = (self.tid, self.msg)
+        self.tid = None
+        self.len = None
+        self.msg = None
+        return r
