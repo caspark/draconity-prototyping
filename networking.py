@@ -85,11 +85,11 @@ class MessengerBufferFullError(Exception):
 class Messenger(object):
     def __init__(self, socket):
         self.socket = socket
-        self.read_buffer = RingBuffer(2 ** 20)
-        self.send_buffer = RingBuffer(2 ** 20)
-        self.parser = MessageParser()
+        self._read_buffer = RingBuffer(2 ** 20)
+        self._send_buffer = RingBuffer(2 ** 20)
+        self._parser = MessageParser()
 
-    def receive_data(self):
+    def read_messages(self):
         """Call this you know there is readable data for this socket"""
         bytes_read = self.socket.recv(2048)
         if len(bytes_read) == 0:
@@ -97,22 +97,19 @@ class Messenger(object):
         print("read {} bytes from {}".format(len(bytes_read), self.socket))
 
         try:
-            self.read_buffer.write(bytes_read)
+            self._read_buffer.write(bytes_read)
         except ValueError:
             raise MessengerBufferFullError(
                 "Failed to read message because read buffer is full", self.socket
             )
 
         while True:
-            parsed = self.parser.try_parse(self.read_buffer)
+            parsed = self._parser.try_parse(self._read_buffer)
             if parsed is None:
                 return
             else:
-                self.received_message(*parsed)
-
-    def received_message(self, tid, message):
-        """A callback for receiving a message, expected to be overridden by subclasses"""
-        raise NotImplementedError("received message not implemented")
+                (tid, message) = parsed
+                yield tid, message
 
     def queue_message(self, tid, message):
         """An API for queuing messages for sending later"""
@@ -120,19 +117,19 @@ class Messenger(object):
         data = bson.dumps(message)
         header = struct.pack(MSG_HEADER_FMT, tid, len(data))
         try:
-            self.send_buffer.write(header)
-            self.send_buffer.write(data)
+            self._send_buffer.write(header)
+            self._send_buffer.write(data)
         except ValueError:
             MessengerBufferFullError(
                 "Failed to enqueue message because send buffer is full", self.socket
             )
 
-    def has_data_to_send(self):
-        return self.send_buffer.bytes_used() > 0
+    def has_messages_to_send(self):
+        return self._send_buffer.bytes_used() > 0
 
-    def send_data(self):
+    def send_messages(self):
         while True:
-            to_send = self.send_buffer.read()
+            to_send = self._send_buffer.read()
             if to_send is None:
                 break
             print("sending {} bytes to {}".format(len(to_send), self.socket))

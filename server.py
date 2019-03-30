@@ -4,23 +4,6 @@ import socket
 import networking
 
 
-class Client(networking.Messenger):
-    def __init__(self, socket):
-        return super().__init__(socket)
-
-    def received_message(self, tid, message):
-        print("server received message", tid, message)
-        if "m" not in message:
-            print("unrecognized message, tid: {}  message: {}".format(tid, message))
-            return
-        method = message["m"]
-
-        if method == "ping":
-            self.queue_message(tid, {"m": "pong", "c": message["c"]})
-        else:
-            print("unrecognized message method:", method)
-
-
 class Server(object):
     def __init__(self):
         self.known_clients = {}
@@ -38,7 +21,7 @@ class Server(object):
         while True:
             timeout = 0.01  # in seconds
             sockets_needing_writes = [
-                s for s, c in self.known_clients.items() if c.has_data_to_send()
+                s for s, c in self.known_clients.items() if c.has_messages_to_send()
             ]
             if len(sockets_needing_writes) > 0:
                 print("{} sockets needing writes".format(len(sockets_needing_writes)))
@@ -65,7 +48,9 @@ class Server(object):
                 if sock == server_socket:
                     (client_socket, address) = server_socket.accept()
                     print("{} is new connection from {}".format(client_socket, address))
-                    self.known_clients[client_socket] = Client(client_socket)
+                    self.known_clients[client_socket] = networking.Messenger(
+                        client_socket
+                    )
                     self.handle_readable_socket(client_socket)
                 else:
                     self.handle_readable_socket(sock)
@@ -80,22 +65,37 @@ class Server(object):
             return
 
         try:
-            self.known_clients[sock].send_data()
-        except networking.MessengerConnectionBroken:
+            self.known_clients[sock].send_messages()
+        except networking.MessengerConnectionBroken as e:
+            print("Handling send error by removing client:", e)
             del self.known_clients[sock]
 
     def handle_readable_socket(self, sock):
         if sock not in self.known_clients:
             return
 
+        client = self.known_clients[sock]
         try:
-            self.known_clients[sock].receive_data()
+            for tid, message in client.read_messages():
+                self.handle_message(client, tid, message)
         except (
             networking.MessengerBufferFullError,
             networking.MessengerConnectionBroken,
         ) as e:
-            print("Handling error by removing client: ", e.message)
+            print("Handling read error by removing client:", e)
             del self.known_clients[sock]
+
+    def handle_message(self, client, tid, message):
+        print("server received message", tid, message)
+        if "m" not in message:
+            print("unrecognized message, tid: {}  message: {}".format(tid, message))
+            return
+        method = message["m"]
+
+        if method == "ping":
+            client.queue_message(tid, {"m": "pong", "c": message["c"]})
+        else:
+            print("unrecognized message method:", method)
 
 
 if __name__ == "__main__":
