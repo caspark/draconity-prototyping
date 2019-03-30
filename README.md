@@ -28,10 +28,6 @@ pipenv run python client.py
 pipenv run python -m unittest -v ring_buffer_test.TestRingBuffer
 ```
 
-## TODOs
-
-* make server sometimes wait to send reply to prove client can handle that
-
 ## Scratchpad
 
 protocol format
