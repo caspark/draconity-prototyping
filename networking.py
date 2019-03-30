@@ -7,17 +7,7 @@ from ring_buffer import RingBuffer
 MSG_HEADER_FMT = "!QQ"  # transaction_id, data_length
 
 
-def send_raw(sock, data):
-    message_length = len(data)
-    bytes_sent_total = 0
-    while bytes_sent_total < message_length:
-        sent = sock.send(data[bytes_sent_total:])
-        if sent == 0:
-            raise RuntimeError("socket connection broken")
-        bytes_sent_total += sent
-
-
-class MessageParser(object):
+class MessageReader(object):
     def __init__(self):
         self.tid = None
         self.len = None
@@ -60,7 +50,7 @@ class Messenger(object):
         self.socket = socket
         self._read_buffer = RingBuffer(2 ** 20)
         self._send_buffer = RingBuffer(2 ** 20)
-        self._parser = MessageParser()
+        self._parser = MessageReader()
 
     def read_messages(self):
         """Call this you when know there is readable data for this socket;
@@ -111,9 +101,13 @@ class Messenger(object):
             if to_send is None:
                 break
             print("sending {} bytes to {}".format(len(to_send), self.socket))
-            try:
-                send_raw(self.socket, to_send)
-            except RuntimeError:
-                raise MessengerConnectionBroken(
-                    "error sending, probably socket connection broke", self.socket
-                )
+
+            message_length = len(to_send)
+            bytes_sent_total = 0
+            while bytes_sent_total < message_length:
+                sent = self.socket.send(to_send[bytes_sent_total:])
+                if sent == 0:
+                    raise MessengerConnectionBroken(
+                        "error sending, probably socket connection broke", self.socket
+                    )
+                bytes_sent_total += sent
