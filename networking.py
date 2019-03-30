@@ -90,7 +90,9 @@ class Messenger(object):
         self._parser = MessageParser()
 
     def read_messages(self):
-        """Call this you know there is readable data for this socket"""
+        """Call this you when know there is readable data for this socket;
+        it will yield a tuple in the format of (transaction_id, message object)
+        for each message that has been received."""
         bytes_read = self.socket.recv(2048)
         if len(bytes_read) == 0:
             raise MessengerConnectionBroken("Socket connection broken", self.socket)
@@ -125,9 +127,11 @@ class Messenger(object):
             )
 
     def has_messages_to_send(self):
+        """Returns true if a message was previously queued but has not yet been sent"""
         return self._send_buffer.bytes_used() > 0
 
     def send_messages(self):
+        """Call this to actually send messages previous queued"""
         while True:
             to_send = self._send_buffer.read()
             if to_send is None:
