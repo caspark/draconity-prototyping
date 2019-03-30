@@ -1,30 +1,15 @@
+import select
 import socket
 
-import select
-import struct
-import bson
-
-from ring_buffer import RingBuffer
 import networking
 
 
-class Client(object):
+class Client(networking.Messenger):
     def __init__(self, socket):
-        self.socket = socket
-        self.read_buffer = RingBuffer(2 ** 20)
-        self.send_buffer = RingBuffer(2 ** 20)
-        self.parser = networking.MessageParser()
-
-    def process_read_data(self):
-        while True:
-            parsed = self.parser.try_parse(self.read_buffer)
-            if parsed is None:
-                return
-            else:
-                self.received_message(*parsed)
+        return super().__init__(socket)
 
     def received_message(self, tid, message):
-        print("received message", tid, message)
+        print("server received message", tid, message)
         if "m" not in message:
             print("unrecognized message, tid: {}  message: {}".format(tid, message))
             return
@@ -34,12 +19,6 @@ class Client(object):
             self.queue_message(tid, {"m": "pong", "c": message["c"]})
         else:
             print("unrecognized message method:", method)
-
-    def queue_message(self, tid, message):
-        print("queuing message to client, tid: {}  message: {}".format(tid, message))
-        data = bson.dumps(message)
-        self.send_buffer.write(struct.pack(networking.MSG_HEADER_FMT, tid, len(data)))
-        self.send_buffer.write(data)
 
 
 class Server(object):
@@ -59,11 +38,9 @@ class Server(object):
         while True:
             timeout = 0.01  # in seconds
             sockets_needing_writes = [
-                s
-                for s, c in self.known_clients.items()
-                if c.send_buffer.bytes_used() > 0
+                s for s, c in self.known_clients.items() if c.has_data_to_send()
             ]
-            if sockets_needing_writes:
+            if len(sockets_needing_writes) > 0:
                 print("{} sockets needing writes".format(len(sockets_needing_writes)))
             ready_to_read, ready_to_write, in_error = select.select(
                 [server_socket] + list(self.known_clients.keys()),
@@ -95,46 +72,30 @@ class Server(object):
 
     def handle_errored_socket(self, sock):
         print("socket in error", socket)
-        del self.known_clients[sock]
+        if sock in self.known_clients:
+            del self.known_clients[sock]
 
     def handle_writable_socket(self, sock):
         if sock not in self.known_clients:
             return
 
-        client = self.known_clients[sock]
-        while True:
-            to_send = client.send_buffer.read()
-            if to_send is None:
-                break
-            print("sending {} bytes to {}".format(len(to_send), sock))
-            try:
-                networking.send_raw(sock, to_send)
-            except RuntimeError:
-                print("error sending, probably socket connection broke", sock)
-                del self.known_clients[sock]
-                return
+        try:
+            self.known_clients[sock].send_data()
+        except networking.MessengerConnectionBroken:
+            del self.known_clients[sock]
 
     def handle_readable_socket(self, sock):
         if sock not in self.known_clients:
             return
 
-        bytes_read = sock.recv(2048)
-        if len(bytes_read) == 0:
-            print("socket connection broken", sock)
-            del self.known_clients[sock]
-            return
-        print("read {} bytes from {}".format(len(bytes_read), sock))
-
-        client = self.known_clients[sock]
         try:
-            client.read_buffer.write(bytes_read)
-        except ValueError:
-            print("client read buffer is full; disconnecting socket", sock)
-            sock.close()
+            self.known_clients[sock].receive_data()
+        except (
+            networking.MessengerBufferFullError,
+            networking.MessengerConnectionBroken,
+        ) as e:
+            print("Handling error by removing client: ", e.message)
             del self.known_clients[sock]
-            return
-
-        client.process_read_data()
 
 
 if __name__ == "__main__":
