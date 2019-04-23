@@ -45,7 +45,7 @@ class UvServer {
 
         void publish(const uint8_t *msg, size_t length);
     private:
-        std::list<UvClient *> clients;
+        std::list<std::shared_ptr<UvClient>> clients;
         std::shared_ptr<uvw::Loop> loop;
         std::mutex lock;
 };
@@ -68,13 +68,12 @@ void UvServer::listen(const char *host, int port) {
         auto peer = tcpClient->peer();
         std::cout << "close " << tcpClient << " " << peer.ip << ":" << peer.port << std::endl;
 
-        UvClient *client = new UvClient;
+        auto client = std::make_shared<UvClient>();
         tcpClient->on<uvw::CloseEvent>([this, client](const uvw::CloseEvent &, uvw::TCPHandle &tcpClient) {
             auto peer = tcpClient.peer();
             std::cout << "close " << &tcpClient << " " << peer.ip << ":" << peer.port << std::endl;
             lock.lock();
             clients.remove(client);
-            delete client;
             lock.unlock();
         });
         tcpClient->on<uvw::EndEvent>([client](const uvw::EndEvent &event, uvw::TCPHandle &tcpClient) {
