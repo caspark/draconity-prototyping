@@ -100,6 +100,7 @@ void UvServer::run() {
 }
 
 int main() {
+    std::cout << "Server starting..." << std::endl;
     UvServer server;
     server.listen("127.0.0.1", 4242);
     server.run();
