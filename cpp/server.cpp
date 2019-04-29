@@ -15,9 +15,7 @@ void dump_vector(std::vector<char> buffer) {
 
 class UvClient {
     public:
-        UvClient() {
-            std::cout << "bytes needed initially " << msg_len << std::endl;
-        }
+        UvClient() {}
 
         void onEnd(const uvw::EndEvent &, uvw::TCPHandle &client) {
             client.close();
@@ -29,21 +27,34 @@ class UvClient {
             buffer.insert(buffer.end(), data, data + event.length);
             if (NETWORK_DEBUG) dump_vector(buffer);
 
-            if (msg_len == 0) {
-                if (buffer.size() >= sizeof(uint32_t) * 2) {
-                    uint32_t * buff_start = reinterpret_cast<uint32_t *>(&buffer[0]);
-                    msg_tid = htonl(*buff_start);
-                    msg_len = htonl(*(buff_start + sizeof(uint32_t)));
-                    if (NETWORK_DEBUG) {
-                        std::cout << "read tid " << msg_tid << std::endl;
-                        std::cout << "read len " << msg_len << std::endl;
+            while (true) {
+                if (msg_len == 0) {
+                    if (buffer.size() >= sizeof(uint32_t) * 2) {
+                        uint32_t * buff_start = reinterpret_cast<uint32_t *>(&buffer[0]);
+                        msg_tid = htonl(buff_start[0]);
+                        msg_len = htonl(buff_start[1]);
+                        if (NETWORK_DEBUG) {
+                            std::cout << "read tid " << msg_tid << std::endl;
+                            std::cout << "read len " << msg_len << std::endl;
+                        }
+                        buffer.erase(buffer.begin(), buffer.begin() + sizeof(uint32_t) * 2);
                     }
-                    buffer.erase(buffer.begin(), buffer.begin() + sizeof(uint32_t) * 2);
+                }
+                if (msg_len > 0 && buffer.size() >= msg_len) {
+                    std::cout << "message: tid=" << msg_tid << ", len=" << msg_len << std::endl;
+                    if (NETWORK_DEBUG) dump_vector(buffer);
+
+
+                    buffer.erase(buffer.begin(), buffer.begin() + msg_len);
+                    if (NETWORK_DEBUG) dump_vector(buffer);
+                    msg_tid = 0;
+                    msg_len = 0;
+                    std::cout << "DONE: tid=" << msg_tid << ", len=" << msg_len << std::endl;
+                } else {
+                    break;
                 }
             }
-            if (msg_tid > 0 && msg_len > 0 && buffer.size() >= msg_len) {
-                std::cout << "message - tid=" << msg_tid << ", len=" << msg_len << std::endl;
-            }
+
             lock.unlock();
         }
 

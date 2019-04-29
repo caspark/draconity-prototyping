@@ -25,7 +25,7 @@ class Server(object):
         self.next_broadcast_at = calc_next_broadcast_time()
 
     def serve(self):
-        host_and_port = (socket.gethostname(), 8000)
+        host_and_port = ("localhost", 8000)
         connection_backlog_limit = 5
 
         server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
