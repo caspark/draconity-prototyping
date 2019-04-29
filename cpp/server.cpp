@@ -29,20 +29,16 @@ class UvClient {
             buffer.insert(buffer.end(), data, data + event.length);
             if (NETWORK_DEBUG) dump_vector(buffer);
 
-            if (msg_tid == 0) {
-                // tid 0 == broadcast, which we should never receive
-                // so that means we're expecting a new message, which starts with transaction id
-                if (buffer.size() >= sizeof(uint32_t)) {
-                    msg_tid = htonl(*reinterpret_cast<uint32_t *>(&buffer[0]));
-                    if (NETWORK_DEBUG) std::cout << "read tid " << msg_tid << std::endl;
-                    buffer.erase(buffer.begin(), buffer.begin() + sizeof(uint32_t));
-                }
-            }
             if (msg_len == 0) {
-                if (buffer.size() >= sizeof(uint32_t)) {
-                    msg_len = htonl(*reinterpret_cast<uint32_t *>(&buffer[0]));
-                    if (NETWORK_DEBUG) std::cout << "read len " << msg_len << std::endl;
-                    buffer.erase(buffer.begin(), buffer.begin() + sizeof(uint32_t));
+                if (buffer.size() >= sizeof(uint32_t) * 2) {
+                    uint32_t * buff_start = reinterpret_cast<uint32_t *>(&buffer[0]);
+                    msg_tid = htonl(*buff_start);
+                    msg_len = htonl(*(buff_start + sizeof(uint32_t)));
+                    if (NETWORK_DEBUG) {
+                        std::cout << "read tid " << msg_tid << std::endl;
+                        std::cout << "read len " << msg_len << std::endl;
+                    }
+                    buffer.erase(buffer.begin(), buffer.begin() + sizeof(uint32_t) * 2);
                 }
             }
             if (msg_tid > 0 && msg_len > 0 && buffer.size() >= msg_len) {
