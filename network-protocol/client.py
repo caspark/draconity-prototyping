@@ -14,7 +14,7 @@ class Client(object):
         s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         s.setblocking(False)
         try:
-            s.connect((socket.gethostname(), 8000))
+            s.connect(("localhost", 8000))
         except BlockingIOError:
             print("connection will complete async")
 

@@ -4,7 +4,7 @@ import bson
 
 from ring_buffer import RingBuffer
 
-MSG_HEADER_FMT = "!QQ"  # transaction_id, data_length
+MSG_HEADER_FMT = "!II"  # transaction_id, data_length
 
 BROADCAST_TRANSACTION_ID = 0
 

@@ -7,5 +7,9 @@
 ## Running
 
 ```
-g++ -ggdb -fsanitize=address -std=c++17 -I uvw/src demo.cpp -luv && ./a.out
+# terminal 1
+g++ -ggdb -Og -fsanitize=address -std=c++17 -I uvw/src server.cpp -luv && ./a.out
+
+# terminal 2
+pipenv run python client.py
 ```
