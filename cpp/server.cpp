@@ -37,13 +37,13 @@ class UvClient {
                         if (NETWORK_DEBUG) {
                             std::cout << "read tid " << msg_tid << std::endl;
                             std::cout << "read len " << msg_len << std::endl;
+                            dump_vector(buffer);
                         }
                         buffer.erase(buffer.begin(), buffer.begin() + sizeof(uint32_t) * 2);
                     }
                 }
                 if (msg_len > 0 && buffer.size() >= msg_len) {
                     std::cout << "message: tid=" << msg_tid << ", len=" << msg_len << std::endl;
-                    if (NETWORK_DEBUG) dump_vector(buffer);
                     uint8_t * buff_start = reinterpret_cast<uint8_t *>(&buffer[0]);
 
                     bson_t *b;
