@@ -1,4 +1,5 @@
 #include <uvw.hpp>
+#include <bson.h>
 #include <memory>
 #include <iostream>
 #include <unistd.h>
@@ -43,7 +44,24 @@ class UvClient {
                 if (msg_len > 0 && buffer.size() >= msg_len) {
                     std::cout << "message: tid=" << msg_tid << ", len=" << msg_len << std::endl;
                     if (NETWORK_DEBUG) dump_vector(buffer);
+                    uint8_t * buff_start = reinterpret_cast<uint8_t *>(&buffer[0]);
 
+                    bson_t *b;
+                    b = bson_new_from_data(buff_start, msg_len);
+                    if (!b) {
+                        fprintf(stderr, "The specified length embedded in <my_data> did not match "
+                                            "<my_data_len>\n");
+                        //TODO some kind of error handling?
+                        return;
+                    }
+                    bson_iter_t iter;
+                    if (bson_iter_init(&iter, b)) {
+                        while (bson_iter_next(&iter)) {
+                            printf("Found element key: \"%s\"\n", bson_iter_key(&iter));
+                        }
+                    }
+
+                    bson_destroy (b);
 
                     buffer.erase(buffer.begin(), buffer.begin() + msg_len);
                     if (NETWORK_DEBUG) dump_vector(buffer);

@@ -11,9 +11,9 @@ Server:
 
 ```
 # sh derivatives
-g++ -ggdb -Og -fsanitize=address -std=c++17 -luv -I uvw/src $(pkg-config --libs --cflags libbson-1.0) server.cpp  && ./a.out
+g++ -ggdb -Og -fsanitize=address -std=c++17 server.cpp -I uvw/src -luv $(pkg-config --libs --cflags libbson-1.0) && ./a.out
 # fish
-g++ -ggdb -Og -fsanitize=address -std=c++17 -luv -I uvw/src (pkg-config --libs --cflags libbson-1.0 | string split " ") server.cpp  && ./a.out
+g++ -ggdb -Og -fsanitize=address -std=c++17 server.cpp -I uvw/src -luv (pkg-config --libs --cflags libbson-1.0 | string split " ") && ./a.out
 ```
 
 Client:
@@ -21,3 +21,9 @@ Client:
 ```
 cd ../network-protocol/ && pipenv run python client.py
 ```
+
+## Reference
+
+http://mongoc.org/libbson/1.9.2/parsing.html
+https://skypjack.github.io/uvw/index.html
+http://docs.libuv.org/en/v1.x/
