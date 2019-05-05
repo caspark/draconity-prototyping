@@ -158,6 +158,11 @@ void UvServer::listen(const char *host, int port) {
             clients.remove(client);
             lock.unlock();
         });
+        tcpClient->on<uvw::ErrorEvent>([client](const uvw::ErrorEvent &event, uvw::TCPHandle &tcpClient) {
+            auto peer = tcpClient.peer();
+            std::cout << "error " << &tcpClient << " " << peer.ip << ":" << peer.port;
+            std::cout << "; details: code=" << event.code() << " name=" << event.name() << std::endl;
+        });
         tcpClient->on<uvw::EndEvent>([client](const uvw::EndEvent &event, uvw::TCPHandle &tcpClient) {
             client->onEnd(event, tcpClient);
         });
@@ -166,7 +171,7 @@ void UvServer::listen(const char *host, int port) {
         });
         tcpClient->on<uvw::WriteEvent>([client](const uvw::WriteEvent &event, uvw::TCPHandle &tcpClient) {
             auto peer = tcpClient.peer();
-            std::cout << "wrote to " << &tcpClient << " " << peer.ip << ":" << peer.port << std::endl;
+            if (NETWORK_DEBUG) std::cout << "wrote to " << &tcpClient << " " << peer.ip << ":" << peer.port << std::endl;
         });
 
         lock.lock();
