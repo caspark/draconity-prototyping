@@ -11,6 +11,10 @@
 #define streq(a, b) (!strcmp(a, b))
 #endif
 
+#define PUBLISH_TID 0
+
+#define BROADCAST_DELAY_MS 1000
+
 void dump_vector(std::vector<char> buffer) {
     for (auto const& c : buffer) {
         std::cout << std::hex << (int) c;
@@ -30,6 +34,7 @@ class UvClient {
         void onEnd(const uvw::EndEvent &, uvw::TCPHandle &client) {
             client.close();
         }
+
         void onData(const uvw::DataEvent &event, uvw::TCPHandle &client) {
             if (NETWORK_DEBUG) std::cout << "client on data " << event.length << std::endl;
             lock.lock();
@@ -95,12 +100,7 @@ class UvClient {
 
                     uint32_t reply_length;
                     uint8_t *reply_data = bson_destroy_with_steal(&reply, true, &reply_length);
-                    uint32_t msg_tid_network = ntohl(msg_tid);
-                    uint32_t reply_length_network = ntohl(reply_length);
-                    tcp->write(reinterpret_cast<char *>(&msg_tid_network), sizeof(uint32_t));
-                    tcp->write(reinterpret_cast<char *>(&reply_length_network), sizeof(uint32_t));
-                    tcp->write(reinterpret_cast<char *>(reply_data), reply_length);
-                    std::cout << "Sending reply; length=" << reply_length << std::endl;
+                    write_message(msg_tid, reply_data, reply_length);
 
                     msg_tid = 0;
                     msg_len = 0;
@@ -112,6 +112,10 @@ class UvClient {
             lock.unlock();
         }
 
+        void publish(uint8_t *msg, size_t length) {
+            write_message(PUBLISH_TID, msg, length);
+        }
+
     private:
         std::shared_ptr<uvw::TCPHandle> tcp;
         std::vector<char> recv_buffer;
@@ -119,6 +123,15 @@ class UvClient {
 
         uint32_t msg_tid = 0;
         uint32_t msg_len = 0;
+
+        void write_message(uint32_t tid, uint8_t *msg, size_t length) {
+            uint32_t tid_network = ntohl(tid);
+            uint32_t length_network = ntohl(length);
+            tcp->write(reinterpret_cast<char *>(&tid_network), sizeof(uint32_t));
+            tcp->write(reinterpret_cast<char *>(&length_network), sizeof(uint32_t));
+            tcp->write(reinterpret_cast<char *>(msg), length);
+            std::cout << "Client sent data; total bytes=" << (sizeof(uint32_t) * 2 + length) << std::endl;
+        }
 };
 
 class UvServer {
@@ -126,6 +139,7 @@ class UvServer {
         UvServer();
         ~UvServer();
         void listen(const char *host, int port);
+        void startBroadcasting();
         void run();
 
         void publish(const uint8_t *msg, size_t length);
@@ -189,6 +203,24 @@ void UvServer::listen(const char *host, int port) {
     tcp->listen();
 }
 
+void UvServer::startBroadcasting() {
+    std::shared_ptr<uvw::TimerHandle> timer = loop->resource<uvw::TimerHandle>();
+
+    timer->on<uvw::TimerEvent>([this](const uvw::TimerEvent &event, uvw::TimerHandle &timer) {
+        uint64_t time_now = std::chrono::milliseconds(loop->now()).count();
+        std::cout << "Sending broadcast happened! Time is " << time_now << std::endl;
+
+        for (auto const& client : clients) {
+            bson_t *b = BCON_NEW("m", BCON_UTF8("time"), "time", BCON_INT64(time_now));
+            uint32_t length;
+            uint8_t *msg = bson_destroy_with_steal(b, true, &length);
+            client->publish(msg, length);
+        }
+    });
+
+    timer->start(std::chrono::milliseconds(BROADCAST_DELAY_MS), std::chrono::milliseconds(BROADCAST_DELAY_MS));
+}
+
 void UvServer::run() {
     loop->run();
 }
@@ -199,5 +231,6 @@ int main() {
     std::cout << "Server starting on " << addr << ":" << port << "..." << std::endl;
     UvServer server;
     server.listen(addr, port);
+    server.startBroadcasting();
     server.run();
 }
