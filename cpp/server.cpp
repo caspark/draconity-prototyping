@@ -21,6 +21,9 @@ void dump_vector(std::vector<char> buffer) {
 class UvClient {
     public:
         UvClient(std::shared_ptr<uvw::TCPHandle> tcp) {
+            // TODO: would prefer to have a pointer to a function just for sending X bytes
+            // But my C++ foo is not strong enough yet to be sure whether that is safe.
+            // So for now let's stash the whole TCPHandle.
             this->tcp = tcp;
         }
 
