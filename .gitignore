@@ -1,2 +1,9 @@
 *.pyc
 a.out
+
+# visual studio files
+/cpp/.vs
+/cpp/Debug/
+/cpp/release/
+/cpp/draconity-prototyping-windows/Debug/
+*.vcxproj.user

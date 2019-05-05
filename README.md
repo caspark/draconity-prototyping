@@ -63,3 +63,34 @@ rough work areas
 2. per platform build system. check out https://github.com/lunixbochs/lib43 . get it running on linux first is probably easier, just to verify there's no mac bits
 3. introducing a cross platform way to load the symbols we need
 
+
+Removing case sensitivity on Windows since Visual Studio does not support that - https://stackoverflow.com/a/51593302
+https://developercommunity.visualstudio.com/content/problem/287514/clexe-cant-find-files-in-casesensitive-folders.html
+
+```
+(Get-ChildItem -Recurse -Directory).FullName | ForEach-Object {fsutil.exe file setCaseSensitiveInfo $_ disable}
+```
+
+Building libbson on Windows:
+
+```
+Download and extract https://github.com/mongodb/libbson/releases/download/1.9.2/libbson-1.9.2.tar.gz
+
+In a command prompt, run:
+
+cd libbson-1.9.2
+
+cmake -G "Visual Studio 15 2017" "-DCMAKE_INSTALL_PREFIX=C:\tools\libbson" "-DCMAKE_BUILD_TYPE=Release" "-DENABLE_TESTS:BOOL=OFF"
+
+"C:\Program Files (x86)\Microsoft Visual Studio\2017\Community\VC\Auxiliary\Build\vcvars32.bat"
+
+msbuild.exe /p:Configuration=Release ALL_BUILD.vcxproj
+msbuild.exe /p:Configuration=Release INSTALL.vcxproj
+
+then follow libbson instructions at http://mongoc.org/libmongoc/1.9.2/visual-studio-guide.html
+```
+
+Getting libuv working in visual studio:
+https://ericeastwood.com/blog/24/using-libuv-with-windows-and-visual-studio-getting-started
+and
+https://stackoverflow.com/a/19845109/775982

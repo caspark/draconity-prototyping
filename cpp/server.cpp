@@ -1,8 +1,15 @@
+#ifdef _WIN32
+	#pragma comment (lib, "libuv.lib")
+	#pragma comment (lib, "ws2_32.lib")
+	#pragma comment(lib, "psapi.lib")
+	#pragma comment(lib, "Iphlpapi.lib")
+	#pragma comment(lib, "userenv.lib")
+#endif
+
 #include <uvw.hpp>
 #include <bson.h>
 #include <memory>
 #include <iostream>
-#include <unistd.h>
 #include <mutex>
 
 #define NETWORK_DEBUG true
