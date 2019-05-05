@@ -10,16 +10,13 @@
 Server:
 
 ```
-# sh derivatives
-g++ -ggdb -Og -fsanitize=address -std=c++17 server.cpp -I uvw/src -luv $(pkg-config --libs --cflags libbson-1.0) && ./a.out
-# fish
-g++ -ggdb -Og -fsanitize=address -std=c++17 server.cpp -I uvw/src -luv (pkg-config --libs --cflags libbson-1.0 | string split " ") && ./a.out
+make
 ```
 
 Client:
 
 ```
-cd ../network-protocol/ && pipenv run python client.py
+make client
 ```
 
 ## Reference
