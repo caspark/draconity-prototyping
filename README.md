@@ -37,7 +37,7 @@ Run the Python server (useful to confirm client is implemented correctly):
 make pyserver
 ```
 
-Run Python tests:
+Run Python tests (because I went overboard and implemented a ringbuffer that was initially very buggy):
 
 ```
 make pytest
@@ -45,9 +45,9 @@ make pytest
 
 ## Reference
 
-http://mongoc.org/libbson/1.9.2/parsing.html
-https://skypjack.github.io/uvw/index.html
-http://docs.libuv.org/en/v1.x/
+* http://mongoc.org/libbson/1.9.2/parsing.html
+* https://skypjack.github.io/uvw/index.html
+* http://docs.libuv.org/en/v1.x/
 
 
 ## Scratchpad
