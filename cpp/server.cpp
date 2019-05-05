@@ -20,7 +20,9 @@ void dump_vector(std::vector<char> buffer) {
 
 class UvClient {
     public:
-        UvClient() {}
+        UvClient(std::shared_ptr<uvw::TCPHandle> tcp) {
+            this->tcp = tcp;
+        }
 
         void onEnd(const uvw::EndEvent &, uvw::TCPHandle &client) {
             client.close();
@@ -35,7 +37,7 @@ class UvClient {
             while (true) {
                 if (msg_len == 0) {
                     if (recv_buffer.size() >= sizeof(uint32_t) * 2) {
-                        uint32_t * recv_buffer_start = reinterpret_cast<uint32_t *>(&recv_buffer[0]);
+                        uint32_t * recv_buffer_start = reinterpret_cast<uint32_t *>(recv_buffer.data());
                         msg_tid = htonl(recv_buffer_start[0]);
                         msg_len = htonl(recv_buffer_start[1]);
                         if (NETWORK_DEBUG) {
@@ -90,17 +92,15 @@ class UvClient {
 
                     uint32_t reply_length;
                     uint8_t *reply_data = bson_destroy_with_steal(&reply, true, &reply_length);
+                    uint32_t msg_tid_network = ntohl(msg_tid);
+                    uint32_t reply_length_network = ntohl(reply_length);
+                    tcp->write(reinterpret_cast<char *>(&msg_tid_network), sizeof(uint32_t));
+                    tcp->write(reinterpret_cast<char *>(&reply_length_network), sizeof(uint32_t));
+                    tcp->write(reinterpret_cast<char *>(reply_data), reply_length);
                     std::cout << "Sending reply; length=" << reply_length << std::endl;
-                    uint32_t * send_buffer_start = reinterpret_cast<uint32_t *>(&recv_buffer[0]);
-                    send_buffer_start[0] = ntohl(msg_tid);
-                    send_buffer_start[1] = ntohl(reply_length);
-                    send_buffer.insert(send_buffer.end(), reply_data, reply_data + reply_length);
-                    if (NETWORK_DEBUG) dump_vector(send_buffer);
 
                     msg_tid = 0;
                     msg_len = 0;
-                    std::cout << "DONE: tid=" << msg_tid << ", len=" << msg_len << std::endl;
-
                 } else {
                     break;
                 }
@@ -110,8 +110,8 @@ class UvClient {
         }
 
     private:
+        std::shared_ptr<uvw::TCPHandle> tcp;
         std::vector<char> recv_buffer;
-        std::vector<char> send_buffer;
         std::mutex lock;
 
         uint32_t msg_tid = 0;
@@ -150,7 +150,7 @@ void UvServer::listen(const char *host, int port) {
         auto peer = tcpClient->peer();
         std::cout << "accepted " << tcpClient << " " << peer.ip << ":" << peer.port << std::endl;
 
-        auto client = std::make_shared<UvClient>();
+        auto client = std::make_shared<UvClient>(tcpClient);
         tcpClient->on<uvw::CloseEvent>([this, client](const uvw::CloseEvent &, uvw::TCPHandle &tcpClient) {
             auto peer = tcpClient.peer();
             std::cout << "close " << &tcpClient << " " << peer.ip << ":" << peer.port << std::endl;
@@ -163,6 +163,10 @@ void UvServer::listen(const char *host, int port) {
         });
         tcpClient->on<uvw::DataEvent>([client](const uvw::DataEvent &event, uvw::TCPHandle &tcpClient) {
             client->onData(event, tcpClient);
+        });
+        tcpClient->on<uvw::WriteEvent>([client](const uvw::WriteEvent &event, uvw::TCPHandle &tcpClient) {
+            auto peer = tcpClient.peer();
+            std::cout << "wrote to " << &tcpClient << " " << peer.ip << ":" << peer.port << std::endl;
         });
 
         lock.lock();
