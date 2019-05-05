@@ -7,11 +7,15 @@
 
 #define NETWORK_DEBUG true
 
+#ifndef streq
+#define streq(a, b) (!strcmp(a, b))
+#endif
+
 void dump_vector(std::vector<char> buffer) {
     for (auto const& c : buffer) {
         std::cout << std::hex << (int) c;
     }
-    std::cout << std::endl;
+    std::cout << std::dec << std::endl;
 }
 
 class UvClient {
@@ -25,26 +29,29 @@ class UvClient {
             if (NETWORK_DEBUG) std::cout << "client on data " << event.length << std::endl;
             lock.lock();
             auto data = &event.data[0];
-            buffer.insert(buffer.end(), data, data + event.length);
-            if (NETWORK_DEBUG) dump_vector(buffer);
+            recv_buffer.insert(recv_buffer.end(), data, data + event.length);
+            if (NETWORK_DEBUG) dump_vector(recv_buffer);
 
             while (true) {
                 if (msg_len == 0) {
-                    if (buffer.size() >= sizeof(uint32_t) * 2) {
-                        uint32_t * buff_start = reinterpret_cast<uint32_t *>(&buffer[0]);
-                        msg_tid = htonl(buff_start[0]);
-                        msg_len = htonl(buff_start[1]);
+                    if (recv_buffer.size() >= sizeof(uint32_t) * 2) {
+                        uint32_t * recv_buffer_start = reinterpret_cast<uint32_t *>(&recv_buffer[0]);
+                        msg_tid = htonl(recv_buffer_start[0]);
+                        msg_len = htonl(recv_buffer_start[1]);
                         if (NETWORK_DEBUG) {
                             std::cout << "read tid " << msg_tid << std::endl;
                             std::cout << "read len " << msg_len << std::endl;
-                            dump_vector(buffer);
+                            dump_vector(recv_buffer);
                         }
-                        buffer.erase(buffer.begin(), buffer.begin() + sizeof(uint32_t) * 2);
+                        recv_buffer.erase(recv_buffer.begin(), recv_buffer.begin() + sizeof(uint32_t) * 2);
                     }
                 }
-                if (msg_len > 0 && buffer.size() >= msg_len) {
+                if (msg_len > 0 && recv_buffer.size() >= msg_len) {
                     std::cout << "message: tid=" << msg_tid << ", len=" << msg_len << std::endl;
-                    uint8_t * buff_start = reinterpret_cast<uint8_t *>(&buffer[0]);
+                    uint8_t * buff_start = reinterpret_cast<uint8_t *>(&recv_buffer[0]);
+
+                    char *method = NULL;
+                    int32_t counter = 0;
 
                     bson_t *b;
                     b = bson_new_from_data(buff_start, msg_len);
@@ -57,17 +64,43 @@ class UvClient {
                     bson_iter_t iter;
                     if (bson_iter_init(&iter, b)) {
                         while (bson_iter_next(&iter)) {
-                            printf("Found element key: \"%s\"\n", bson_iter_key(&iter));
+                            const char *key = bson_iter_key(&iter);
+                            printf("Found element key: \"%s\" of type %#04x\n", bson_iter_key(&iter), bson_iter_type(&iter));
+                            if (streq(key, "m") && BSON_ITER_HOLDS_UTF8(&iter)) {
+                                method = bson_iter_dup_utf8(&iter, NULL);
+                            } else if (streq(key, "c") && BSON_ITER_HOLDS_INT32(&iter)) {
+                                counter = bson_iter_int32(&iter);
+                            }
                         }
                     }
+                    bson_destroy(b);
+                    recv_buffer.erase(recv_buffer.begin(), recv_buffer.begin() + msg_len);
 
-                    bson_destroy (b);
+                    bson_t reply = BSON_INITIALIZER;
+                    if streq(method, "ping") {
+                        std::cout << "Recognized ping! Received counter is " << counter << std::endl;
+                        counter++;
+                        std::cout << "Sending ping back! New counter is " << counter << std::endl;
 
-                    buffer.erase(buffer.begin(), buffer.begin() + msg_len);
-                    if (NETWORK_DEBUG) dump_vector(buffer);
+                        BSON_APPEND_UTF8(&reply, "m", "pong");
+                        BSON_APPEND_INT32 (&reply, "c", counter);
+                    } else {
+                        std::cout << "Unrecognized method: " << method << std::endl;
+                    }
+
+                    uint32_t reply_length;
+                    uint8_t *reply_data = bson_destroy_with_steal(&reply, true, &reply_length);
+                    std::cout << "Sending reply; length=" << reply_length << std::endl;
+                    uint32_t * send_buffer_start = reinterpret_cast<uint32_t *>(&recv_buffer[0]);
+                    send_buffer_start[0] = ntohl(msg_tid);
+                    send_buffer_start[1] = ntohl(reply_length);
+                    send_buffer.insert(send_buffer.end(), reply_data, reply_data + reply_length);
+                    if (NETWORK_DEBUG) dump_vector(send_buffer);
+
                     msg_tid = 0;
                     msg_len = 0;
                     std::cout << "DONE: tid=" << msg_tid << ", len=" << msg_len << std::endl;
+
                 } else {
                     break;
                 }
@@ -77,7 +110,8 @@ class UvClient {
         }
 
     private:
-        std::vector<char> buffer;
+        std::vector<char> recv_buffer;
+        std::vector<char> send_buffer;
         std::mutex lock;
 
         uint32_t msg_tid = 0;
