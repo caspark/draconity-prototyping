@@ -14,7 +14,7 @@ def calc_next_broadcast_time():
 def build_time_message():
     """A dummy message to test that broadcast (publishing messages without an incoming message) works"""
     return {
-        "m": "time",
+        "cmd": "time",
         "time": datetime.datetime.now().replace(tzinfo=datetime.timezone.utc),
     }
 
@@ -110,15 +110,18 @@ class Server(object):
             del self.known_clients[sock]
 
     def handle_message(self, client, tid, message):
-        if "m" not in message:
+        if "cmd" not in message:
             print("unrecognized message, tid: {}  message: {}".format(tid, message))
             return
-        method = message["m"]
+        cmd = message["cmd"]
 
-        if method == "ping":
-            client.queue_message(tid, {"m": "pong", "c": message["c"]})
+        if cmd == "ping":
+            client.queue_message(tid, {
+                "cmd": "pong",
+                "pingpong-counter": message["pingpong-counter"] + 1
+            })
         else:
-            print("unrecognized message method:", method)
+            print("unrecognized message cmd:", cmd)
 
 
 if __name__ == "__main__":

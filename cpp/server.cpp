@@ -67,7 +67,7 @@ class UvClient {
                     std::cout << "message: tid=" << msg_tid << ", len=" << msg_len << std::endl;
                     uint8_t * buff_start = reinterpret_cast<uint8_t *>(&recv_buffer[0]);
 
-                    char *method = NULL;
+                    char *cmd = NULL;
                     int32_t counter = 0;
 
                     bson_t *b;
@@ -83,9 +83,9 @@ class UvClient {
                         while (bson_iter_next(&iter)) {
                             const char *key = bson_iter_key(&iter);
                             printf("Found element key: \"%s\" of type %#04x\n", bson_iter_key(&iter), bson_iter_type(&iter));
-                            if (streq(key, "m") && BSON_ITER_HOLDS_UTF8(&iter)) {
-                                method = bson_iter_dup_utf8(&iter, NULL);
-                            } else if (streq(key, "c") && BSON_ITER_HOLDS_INT32(&iter)) {
+                            if (streq(key, "cmd") && BSON_ITER_HOLDS_UTF8(&iter)) {
+                                cmd = bson_iter_dup_utf8(&iter, NULL);
+                            } else if (streq(key, "pingpong-counter") && BSON_ITER_HOLDS_INT32(&iter)) {
                                 counter = bson_iter_int32(&iter);
                             }
                         }
@@ -94,15 +94,15 @@ class UvClient {
                     recv_buffer.erase(recv_buffer.begin(), recv_buffer.begin() + msg_len);
 
                     bson_t reply = BSON_INITIALIZER;
-                    if streq(method, "ping") {
+                    if streq(cmd, "ping") {
                         std::cout << "Recognized ping! Received counter is " << counter << std::endl;
                         counter++;
                         std::cout << "Sending ping back! New counter is " << counter << std::endl;
 
-                        BSON_APPEND_UTF8(&reply, "m", "pong");
-                        BSON_APPEND_INT32 (&reply, "c", counter);
+                        BSON_APPEND_UTF8(&reply, "cmd", "pong");
+                        BSON_APPEND_INT32 (&reply, "pingpong-counter", counter);
                     } else {
-                        std::cout << "Unrecognized method: " << method << std::endl;
+                        std::cout << "Unrecognized cmd: " << cmd << std::endl;
                     }
 
                     uint32_t reply_length;
@@ -218,7 +218,7 @@ void UvServer::startBroadcasting() {
         std::cout << "Sending broadcast happened! Time is " << time_now << std::endl;
 
         for (auto const& client : clients) {
-            bson_t *b = BCON_NEW("m", BCON_UTF8("time"), "time", BCON_INT64(time_now));
+            bson_t *b = BCON_NEW("cmd", BCON_UTF8("time"), "time", BCON_INT64(time_now));
             uint32_t length;
             uint8_t *msg = bson_destroy_with_steal(b, true, &length);
             client->publish(msg, length);

@@ -6,7 +6,7 @@ import networking
 
 
 def build_ping_message(count):
-    return {"m": "ping", "c": count}
+    return {"cmd": "ping", "pingpong-counter": count}
 
 
 class Client(object):
@@ -58,18 +58,21 @@ class Client(object):
         self.server.queue_message(tid, message)
 
     def handle_message(self, tid, message):
-        if "m" not in message:
+        if "cmd" not in message:
             print("unrecognized message, tid: {}  message: {}".format(tid, message))
             return
-        method = message["m"]
+        cmd = message["cmd"]
 
-        if method == "pong":
-            count = message["c"]
-            print("Ping pong #{} completed! Trying {} now.".format(count, count + 1))
+        if cmd == "pong":
+            count = message["pingpong-counter"]
+            print("Received ping pong #{}! Trying {} now.".format(count, count + 1))
             self.server.queue_message(tid, build_ping_message(count + 1))
-        elif method == "time":
+        elif cmd == "time":
             time = message["time"]
             print("Received server time broadcast! Time on server is {}".format(time))
+        elif tid == 0 and "success" in message:
+            # draconity is telling us whether a command we issued succeeded
+            print("Received Draconity command result: success={}, cmd={}".format(message['success'], cmd))
         else:
             print("unrecognized message method:", method)
 
